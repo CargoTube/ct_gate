@@ -1,0 +1,22 @@
+{"1.1.0",
+[{<<"cowboy">>,{pkg,<<"cowboy">>,<<"1.1.2">>},0},
+ {<<"cowlib">>,{pkg,<<"cowlib">>,<<"1.0.2">>},1},
+ {<<"ct_msg">>,
+  {git,"https://github.com/cargotube/ct_msg.git",
+       {ref,"18b0416007f1368a3ed1ccbd9ea5a51ffab01c29"}},
+  0},
+ {<<"ct_router_if">>,
+  {git,"https://github.com/cargotube/ct_router_if.git",
+       {ref,"3e32f5661f6af50cf549ee32c38394296f42875b"}},
+  0},
+ {<<"jsone">>,{pkg,<<"jsone">>,<<"1.4.1">>},1},
+ {<<"msgpack">>,{pkg,<<"msgpack">>,<<"0.7.0">>},1},
+ {<<"ranch">>,{pkg,<<"ranch">>,<<"1.3.2">>},1}]}.
+[
+{pkg_hash,[
+ {<<"cowboy">>, <<"61AC29EA970389A88ECA5A65601460162D370A70018AFE6F949A29DCA91F3BB0">>},
+ {<<"cowlib">>, <<"9D769A1D062C9C3AC753096F868CA121E2730B9A377DE23DEC0F7E08B1DF84EE">>},
+ {<<"jsone">>, <<"10ECFB2E2FD216D6451AF71CF14F276E063A096E15B685DE7535FD680466C9B5">>},
+ {<<"msgpack">>, <<"128AE0A2227C7E7A2847C0F0F73551C268464F8C1EE96BFFB920BC0A5712B295">>},
+ {<<"ranch">>, <<"E4965A144DC9FBE70E5C077C65E73C57165416A901BD02EA899CFD95AA890986">>}]}
+].
