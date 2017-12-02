@@ -31,5 +31,8 @@ compile:
 
 rel:
 	$(REBAR) release
+
+run: rel
+	./_build/default/rel/ct_gate/bin/ct_gate
 shell:
 	$(REBAR) shell

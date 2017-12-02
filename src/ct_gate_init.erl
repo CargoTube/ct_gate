@@ -35,7 +35,7 @@ code_change(_OldVsn, State, _Extra) ->
 
 maybe_start_tcp_listener(true) ->
     Port = application:get_env(ct_gate, tcp_port, 5555),
-    {ok,_} = ranch:start_listener(ct_gate_tcp, 5,
+    {ok, _} = ranch:start_listener(ct_gate_tcp, 5,
                                   ranch_tcp, [{port, Port}],
                                   ct_gate_tcp, []),
     ok;

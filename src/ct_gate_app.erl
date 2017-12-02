@@ -15,13 +15,11 @@
 %%====================================================================
 
 start(_StartType, _StartArgs) ->
-
-    StartTCP = application:get_env(ct_gate, enable_tcp, false),
+    StartTCP = application:get_env(ct_gate, enable_tcp, true),
     ok = maybe_start_tcp_listener(StartTCP),
 
-    StartWeb = application:get_env(ct_gate, enable_web, false),
+    StartWeb = false and application:get_env(ct_gate, enable_web, true),
     ok = maybe_start_web_listener(StartWeb),
-
     ct_gate_sup:start_link().
 
 %%--------------------------------------------------------------------
@@ -33,13 +31,13 @@ stop(_State) ->
 %%====================================================================
 
 maybe_start_tcp_listener(true) ->
-    SSL = tcp_use_ssl(),
-    Protocol = tcp_procotol(SSL),
+    UseSSL = tcp_use_ssl(),
+    Protocol = tcp_procotol(UseSSL),
     NumAcceptors = application:get_env(ct_gate, tcp_num_acceptors, 5),
-    Options = tcp_options(SSL),
-    {ok,_} = ranch:start_listener(ct_gate_tcp, NumAcceptors,
-                                  Protocol, Options,
-                                  ct_gate_tcp, []),
+    Options = tcp_options(UseSSL),
+    {ok, _} = ranch:start_listener(ct_gate_tcp, NumAcceptors,
+                                   Protocol, Options,
+                                   ct_gate_tcp, []),
     ok;
 maybe_start_tcp_listener(false) ->
     ok.
@@ -54,18 +52,14 @@ tcp_procotol(true) ->
 tcp_procotol(_) ->
     ranch_tcp.
 
-tcp_options(SSL) ->
-    Port = application:get_env(ct_gate, tcp_port, 8080),
+tcp_options(UseSSL) ->
+    Port = application:get_env(ct_gate, tcp_port, 5555),
     Inet6 = application:get_env(ct_gate, tcp_inet6, true),
     Inet6only = application:get_env(ct_gate, tcp_inet6only, false),
 
     Cert = application:get_env(ct_gate, tcp_cert_file, undefined),
     Key = application:get_env(ct_gate, tcp_key_file, undefined),
-    options([{inet6, Inet6},
-             {inet6_only, Inet6only},
-             {port, Port},
-             {certfile, Cert},
-             {keyfile, Key}], [], SSL).
+    gen_options(Inet6, Inet6only, Port, Cert, Key, UseSSL).
 
 
 
@@ -79,6 +73,7 @@ maybe_start_web_listener(true) ->
     ok;
 maybe_start_web_listener(_) ->
     ok.
+
 
 web_use_ssl() ->
     Cert = application:get_env(ct_gate, web_cert_file, undefined),
@@ -94,8 +89,9 @@ start_tls_or_clear(false, Name, Options, Dispatch) ->
                                  #{ env => #{dispatch => Dispatch}}),
     ok.
 
+
 web_dispatch() ->
-    Path = application:get_env(ct_gate, web_ws_path, "/ct"),
+    Path = application:get_env(ct_gate, web_ws_path, "/"),
     cowboy_router:compile(
       [
        {'_', [
@@ -105,20 +101,25 @@ web_dispatch() ->
 
 
 
-web_options(SSL) ->
+web_options(UseSSL) ->
     Port = application:get_env(ct_gate, web_port, 8080),
     Inet6 = application:get_env(ct_gate, web_inet6, true),
     Inet6only = application:get_env(ct_gate, web_inet6only, false),
 
     Cert = application:get_env(ct_gate, web_cert_file, undefined),
     Key = application:get_env(ct_gate, web_key_file, undefined),
+    gen_options(Inet6, Inet6only, Port, Cert, Key, UseSSL).
+
+
+gen_options(Inet6, Inet6only, Port, Cert, Key, UseSSL) ->
     options([{inet6, Inet6},
              {inet6_only, Inet6only},
              {port, Port},
              {certfile, Cert},
-             {keyfile, Key}], [], SSL).
+             {keyfile, Key}], [], UseSSL).
 
-
+options([], Options, _SSL) ->
+    Options;
 options([{port, _} = Port | T], Options, SSL) ->
     options(T, [ Port | Options ], SSL);
 options([{inet6, true} | T], Options, SSL) ->
