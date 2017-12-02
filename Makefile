@@ -6,7 +6,7 @@ APP=sb_core
 all: compile
 
 clean:
-	$(REBAR) cover -r 
+	$(REBAR) cover -r
 	$(REBAR) clean
 
 eunit:
@@ -17,11 +17,22 @@ ct:
 	$(REBAR) ct
 	$(REBAR) cover -v
 
+dialyzer:
+	$(REBAR) dialyzer
+
 tests: elvis eunit ct
-	$(REBAR) dialyzer 
+	$(REBAR) dialyzer
 
 elvis:
 	$(REBAR) lint
 
 compile:
 	$(REBAR) compile
+
+rel:
+	$(REBAR) release
+
+run: rel
+	./_build/default/rel/ct_gate/bin/ct_gate
+shell:
+	$(REBAR) shell
