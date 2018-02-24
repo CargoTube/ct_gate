@@ -53,7 +53,7 @@ start_link(Ref, Socket, Transport, Opts) ->
     start_link_tcp_connection_server(Ref, Socket, Transport, Opts).
 
 init(Ref, Socket, Transport, _Opts = []) ->
-    lager:debug("init tcp"),
+    lager:debug("[~p] init tcp", [self()]),
     ack_otp_starting(Ref),
     Data = create_initial_data(Transport, Socket),
     activate_connection_once(Data),
@@ -88,6 +88,7 @@ handle_event(info, next_message, State, #data{
     trigger_next_message(),
     Type = ct_msg:get_type(Message),
     NewData = Data#data{message_queue = Tail},
+    lager:debug("[~p] --> ~p", [self(), Message]),
     handle_incoming_wamp_message(State, Type, Message, NewData);
 handle_event(info, next_message, State, #data{message_queue = []} = Data) ->
     activate_connection_once(Data),
@@ -95,11 +96,11 @@ handle_event(info, next_message, State, #data{message_queue = []} = Data) ->
 handle_event(info, {tcp, Socket,
                     <<127, MaxLengthExp:4, SerializerNumber:4, 0, 0>>
                         = TcpData}, handshake, #data{socket = Socket} = Data) ->
-    lager:debug(">>> ~p", [TcpData]),
+    lager:debug("[~p] >>> ~p", [self(), TcpData]),
     handle_handshake_message(MaxLengthExp, SerializerNumber, Data );
 
 handle_event(info, {tcp, S, TcpData}, State, #data{socket = S} = Data) ->
-    lager:debug(">>> ~p",[TcpData]),
+    lager:debug("[~p] >>> ~p",[self(), TcpData]),
     handle_tcp_data(TcpData, State, Data);
 handle_event(info, {tcp_closed, Socket}, _, #data{socket = Socket} = Data) ->
     close_connection(Data);
@@ -107,12 +108,12 @@ handle_event(info, {to_peer, Message}, State, Data) ->
     Type = ct_msg:get_type(Message),
     handle_outgoing_wamp_message(State, Type, Message, Data);
 handle_event(Event, Content, State, Data) ->
-    lager:debug("ignoring event [~p] ~p ~p",[State, Event, Content]),
+    lager:debug("[~p] ignore event [~p] ~p ~p",[self(), State, Event, Content]),
     {next_state, State, Data}.
 
 
 handle_handshake_message(MaxLengthExp, SerializerNumber, Data) ->
-    lager:debug("handle handshake"),
+    lager:debug("[~p] handle handshake", [self()]),
     Serializer = translate_serializer_number_to_name(SerializerNumber),
     MaxLength = calculateMaxLength(MaxLengthExp),
     send_handshake_reply(Serializer, Data),
@@ -146,7 +147,8 @@ handle_incoming_wamp_message(established, Type, Message, Data)
   when Type == error; Type == publish; Type == subscribe;
        Type == unsubscribe; Type == call; Type == register; Type == unregister;
        Type == yield->
-    %% TODO: check what type the peer is and allow only messages for that type e.g. caller
+    %% TODO: check what type the peer is and allow only messages for that
+    %% type e.g. caller
     router_handle_established_message(Message, Data),
     {next_state, established, Data};
 handle_incoming_wamp_message(State, ping, {ping, Payload}, Data) ->
@@ -160,7 +162,7 @@ handle_incoming_wamp_message(State, pong, _, Data) ->
     %% bad/old pong reply - just ignore it
     {next_state, State, Data};
 handle_incoming_wamp_message(_, _, _, Data) ->
-    lager:debug("bad message, goodbye and kill connection"),
+    lager:debug("[~p] bad message, goodbye and kill connection", [self()]),
     serialize_and_send_to_peer(?GOODBYE(#{}, canceled), Data),
     close_connection(Data).
 
@@ -185,7 +187,8 @@ handle_outgoing_wamp_message(established, Type, Message, Data)
     serialize_and_send_to_peer(Message, Data),
     {next_state, established, Data};
 handle_outgoing_wamp_message(State, _Type, Message, Data) ->
-    lager:warning("throwing away unsupported out message [~p] ~p",[State, Message]),
+    lager:warning("[~p] throw away bad out message [~p] ~p",[self(), State,
+                                                             Message]),
     {next_state, established, Data}.
 
 
@@ -279,13 +282,13 @@ activate_connection_once(#data{transport=Transport, socket=Socket}) ->
 
 
 serialize_and_send_to_peer(Msg,#data{serializer=Serializer}=Data) ->
-    lager:debug("<-- ~p",[Msg]),
+    lager:debug("[~p] <-- ~p",[self(), Msg]),
     OutMsg = ct_msg:serialize(Msg, Serializer),
     send_to_peer(OutMsg, Data).
 
 
 send_to_peer(Msg, #data{transport=Transport, socket=Socket}) ->
-    lager:debug("<<< ~p",[Msg]),
+    lager:debug("[~p] <<< ~p",[self(), Msg]),
     Transport:send(Socket,Msg).
 
 
@@ -295,7 +298,7 @@ get_peername(Socket) ->
 
 
 terminate(_Reason, _State, _Data) ->
-    lager:debug("connection closing"),
+    lager:debug("[~p] connection closing", [self()]),
     ok.
 
 code_change(_OldVsn, State, Data, _Extra) ->
