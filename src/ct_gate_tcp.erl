@@ -144,7 +144,7 @@ handle_incoming_wamp_message(established, goodbye, _Message, Data) ->
     serialize_and_send_to_peer(?GOODBYE(#{}, goodbye_and_out), Data),
     {next_state, handshake, reset_data_close_session(Data)};
 handle_incoming_wamp_message(expect_goodbye, goodbye, _Message, Data) ->
-    {next_state, handshake, Data};
+    {next_state, handshake, reset_data_close_session(Data)};
 handle_incoming_wamp_message(established, Type, Message, Data)
   when Type == error; Type == publish; Type == subscribe;
        Type == unsubscribe; Type == call; Type == register; Type == unregister;
@@ -194,7 +194,7 @@ handle_outgoing_wamp_message(established, Type, Message, Data)
     {next_state, established, Data};
 handle_outgoing_wamp_message(established, goodbye, Message, Data) ->
     serialize_and_send_to_peer(Message, Data),
-    {next_state, expect_goodbye, reset_data_close_session(Data)};
+    {next_state, expect_goodbye, Data};
 handle_outgoing_wamp_message(State, _Type, Message, Data) ->
     lager:warning("[~p] throw away bad out message [~p] ~p",[self(), State,
                                                              Message]),
