@@ -39,7 +39,7 @@
           message_queue = [],
           ping_payload = undefined,
           ping_time = undefined,
-          session = undefined,
+          session_id = undefined,
           router_if = undefined
          }).
 
@@ -76,7 +76,7 @@ create_initial_data(Transport,Socket) ->
        ok=Ok,
        closed=Closed,
        error=Error,
-       session = undefined,
+       session_id = undefined,
        router_if = application:get_env(ct_gate, router_if, ct_router_if_off),
        peer = get_peername(Socket)
       }.
@@ -168,8 +168,9 @@ handle_incoming_wamp_message(_, _, _, Data) ->
 
 handle_outgoing_wamp_message(State, welcome, Welcome, Data)
   when State == welcome_or_challenge; State == welcome ->
-    serialize_and_send_to_peer(Welcome, Data),
-    {next_state, established, Data};
+    UpdatedData = set_session_id(Welcome, Data),
+    serialize_and_send_to_peer(Welcome, UpdatedData),
+    {next_state, established, UpdatedData};
 handle_outgoing_wamp_message(State, abort, Abort, Data)
   when State == welcome_or_challenge; State == welcome ->
     serialize_and_send_to_peer(Abort, Data),
@@ -189,7 +190,10 @@ handle_outgoing_wamp_message(State, _Type, Message, Data) ->
 
 
 
-%% handle_router_messages(State, {}V
+set_session_id(Welcome, Data) ->
+    {ok, SessionId} = ct_msg:extract_session(Welcome),
+    Data#data{session_id = SessionId}.
+
 
 
 translate_serializer_number_to_name(1) -> raw_json;
@@ -256,7 +260,7 @@ reset_data_close_session(Data) ->
               buffer = <<"">>,
               ping_payload = undefined,
               ping_time = undefined,
-              session = undefined
+              session_id = undefined
              }.
 
 activate_or_close_connection(unsupported, Data) ->
@@ -274,12 +278,8 @@ activate_connection_once(#data{transport=Transport, socket=Socket}) ->
     ok = Transport:setopts(Socket, [{active, once}]).
 
 
-%% handle_socket_error(Error, State) ->
-%%     % need to close the routing - maybe
-%%     {stop, {error, Error}, State }.
-
-
 serialize_and_send_to_peer(Msg,#data{serializer=Serializer}=Data) ->
+    lager:debug("<-- ~p",[Msg]),
     OutMsg = ct_msg:serialize(Msg, Serializer),
     send_to_peer(OutMsg, Data).
 
@@ -310,11 +310,11 @@ router_handle_hello(Hello, #data{router_if = RouterIf}) ->
     ct_router_if:handle_hello(Hello, RouterIf).
 
 router_handle_established_message(Message, #data{router_if = RouterIf,
-                                                 session = Session}) ->
-    ct_router_if:handle_established(Message, Session, RouterIf).
+                                                 session_id = SessionId}) ->
+    ct_router_if:handle_established(Message, SessionId, RouterIf).
 
-router_handle_session_closed(#data{session = undefined}) ->
+router_handle_session_closed(#data{session_id = undefined}) ->
     ok;
 router_handle_session_closed(#data{router_if = RouterIf,
-                                   session = Session}) ->
-    ct_router_if:handle_session_closed(Session, RouterIf).
+                                   session_id = SessionId}) ->
+    ct_router_if:handle_session_closed(SessionId, RouterIf).
