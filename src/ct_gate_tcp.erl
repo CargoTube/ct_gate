@@ -34,7 +34,6 @@ init(Ref, Socket, Transport, _Opts = []) ->
     lager:debug("[~p] init tcp", [self()]),
     ack_otp_starting(Ref),
     Data = ct_gate_in:create_initial_tcp_data(Transport, Socket),
-    ct_gate_in:activate_connection_once(Data),
     gen_statem:enter_loop(?MODULE, [], handshake, Data).
 
 

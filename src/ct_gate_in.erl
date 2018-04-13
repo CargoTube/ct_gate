@@ -70,6 +70,7 @@ create_initial_tcp_data(Transport,Socket) ->
                 },
     create_initial_data(TcpData, undefined).
 
+
 create_initial_ws_data(FrameTag, Serializer) ->
     WsData = #ws_data{
        frametag = FrameTag
@@ -78,12 +79,14 @@ create_initial_ws_data(FrameTag, Serializer) ->
 
 
 create_initial_data(ConData, Serializer) ->
-    #data{
+    Data = #data{
        con = ConData,
        serializer = Serializer,
        session_id = undefined,
        router_if = application:get_env(ct_gate, router_if, ct_router_if_off)
-      }.
+      },
+    activate_connection_once(Data),
+    Data.
 
 
 handle_event(info, next_message, State,
@@ -299,9 +302,13 @@ close_connection( #data{ con = #tcp_data{ socket = Socket} } = Data) ->
     ok = gen_tcp:close(Socket),
     {stop, normal, Data}.
 
+
 activate_connection_once(#data{ con = #tcp_data{transport=Transport,
                                                 socket=Socket} }) ->
-    ok = Transport:setopts(Socket, [{active, once}]).
+    ok = Transport:setopts(Socket, [{active, once}]);
+activate_connection_once(#data{ con = #ws_data{}} ) ->
+    %% not needed for websocket
+    ok.
 
 
 serialize_and_send_to_peer(Msg,#data{serializer=Serializer}=Data) ->
