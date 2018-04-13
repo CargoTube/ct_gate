@@ -84,6 +84,10 @@ handle_event(info, next_message, State,
     NewData = Data#data{message_queue = Tail},
     lager:debug("[~p] --> ~p", [self(), Message]),
     handle_incoming_wamp_message(State, Type, Message, NewData);
+handle_event(info, next_message, State, #data{message_queue = [],
+                                              con = undefined
+                                             } = Data) ->
+    {next_state, State, Data};
 handle_event(info, next_message, State, #data{message_queue = []} = Data) ->
     activate_connection_once(Data),
     {next_state, State, Data};
