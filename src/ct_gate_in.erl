@@ -1,5 +1,6 @@
 %%
 %% Copyright (c) 2018 Bas Wegh
+%%
 
 -module(ct_gate_in).
 -include_lib("ct_msg/include/ct_msg.hrl").
@@ -30,11 +31,12 @@
 
 -record(ws_data, {
           frametag = undefined,
-          serializer = undefined
+          state = undefined
          }).
 
 -record(data, {
           con = undefined,
+          serializer = undefined,
 
           max_length = 0,
           buffer = <<"">>,
@@ -66,19 +68,19 @@ create_initial_tcp_data(Transport,Socket) ->
                  closed = Closed,
                  error = Error
                 },
-    create_initial_data(TcpData).
+    create_initial_data(TcpData, undefined).
 
 create_initial_ws_data(FrameTag, Serializer) ->
     WsData = #ws_data{
-       frametag = FrameTag,
-       serializer = Serializer
+       frametag = FrameTag
       },
-    create_initial_data(WsData).
+    create_initial_data(WsData, Serializer).
 
 
-create_initial_data(ConData) ->
+create_initial_data(ConData, Serializer) ->
     #data{
        con = ConData,
+       serializer = Serializer,
        session_id = undefined,
        router_if = application:get_env(ct_gate, router_if, ct_router_if_off)
       }.
@@ -168,8 +170,7 @@ handle_incoming_wamp_message(State, ping, {ping, Payload}, Data) ->
     send_to_peer(ct_msg:pong(Payload), Data),
     {next_state, State, Data};
 handle_incoming_wamp_message(State, pong, {pong, Payload},
-                             #data{ con = #tcp_data{ping_payload = Payload}
-                                  } = Data) ->
+                             #data{ ping_payload = Payload } = Data) ->
     %% TODO: calculate ping time
     {next_state, State, Data};
 handle_incoming_wamp_message(State, pong, _, Data) ->
