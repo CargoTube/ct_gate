@@ -5,7 +5,6 @@
 -module(ct_gate_in).
 -include_lib("ct_msg/include/ct_msg.hrl").
 
--behaviour(gen_statem).
 
 %%
 -export([create_initial_tcp_data/2]).
@@ -13,8 +12,6 @@
 -export([close_connection/1]).
 
 %% gen_statem.
--export([init/1]).
--export([callback_mode/0]).
 -export([handle_event/4]).
 -export([terminate/3]).
 -export([code_change/4]).
@@ -47,15 +44,6 @@
           ping_payload = undefined,
           peer = undefined
          }).
-
-%% use the handle even function
-callback_mode() -> handle_event_function.
-
-
-%%% for TCP
-
-init(_Opts) ->
-    erlang:error("don't call").
 
 
 create_initial_tcp_data(Transport,Socket) ->
@@ -300,6 +288,8 @@ close_connection( #data{ con = #tcp_data{ socket = Socket} } = Data) ->
     lager:debug("[~p] connection closing", [self()]),
     ok = router_handle_session_closed(Data),
     ok = gen_tcp:close(Socket),
+    {stop, normal, Data};
+close_connection( #data{ con = undefined } = Data) ->
     {stop, normal, Data}.
 
 
@@ -309,7 +299,6 @@ activate_connection_once(#data{ con = #tcp_data{transport=Transport,
 activate_connection_once(#data{ con = #ws_data{}} ) ->
     %% not needed for websocket
     ok.
-
 
 serialize_and_send_to_peer(Msg,#data{serializer=Serializer}=Data) ->
     lager:debug("[~p] <-- ~p",[self(), Msg]),
