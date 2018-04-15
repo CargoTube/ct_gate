@@ -198,6 +198,7 @@ handle_outgoing_wamp_message(State, _Type, Message, Data) ->
 
 set_session_id(Welcome, Data) ->
     {ok, SessionId} = ct_msg:extract_session(Welcome),
+    lager:debug("[~p] SessionId: ~p", [self(), SessionId]),
     Data#data{session_id = SessionId}.
 
 
