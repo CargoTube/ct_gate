@@ -29,6 +29,7 @@ start_link(Ref, Socket, Transport, Opts) ->
      start_link_tcp_connection_server(Ref, Socket, Transport, Opts).
 
 init({Ref, Socket, Transport, _Opts}) ->
+    ok = proc_lib:init_ack({ok, self()}),
     ok = ranch:accept_ack(Ref),
     {ok, Pid} = ct_gate_in:start_link(tcp),
     State = #state{
