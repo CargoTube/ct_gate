@@ -29,7 +29,7 @@ start_link(Ref, Socket, Transport, Opts) ->
      start_link_tcp_connection_server(Ref, Socket, Transport, Opts).
 
 init({Ref, Socket, Transport, _Opts = []}) ->
-    ack_otp_starting(Ref),
+    ok = ranch:accept_ack(Ref),
     {ok, Pid} = ct_gate_in:start_link(tcp),
     State = #state{
                gate_in = Pid,
@@ -80,10 +80,6 @@ connection_send(Data, #state{transport = Transport, socket = Socket}) ->
 
 connection_close(#state{transport = Transport, socket = Socket}) ->
     Transport:close(Socket).
-
-ack_otp_starting(Ref) ->
-	ok = proc_lib:init_ack({ok, self()}),
-	ok = ranch:accept_ack(Ref).
 
 start_link_tcp_connection_server(Ref, Socket, Transport, Opts) ->
     {ok, proc_lib:start_link(?MODULE, init, [{Ref, Socket, Transport, Opts}])}.
