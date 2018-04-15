@@ -8,10 +8,8 @@
 -behaviour(ranch_protocol).
 
 
-%% for tcp
+%% for ranch_protocol
 -export([start_link/4]).
--export([init/4]).
-
 
 %% gen_server.
 -export([init/1]).
@@ -30,10 +28,7 @@
 start_link(Ref, Socket, Transport, Opts) ->
      start_link_tcp_connection_server(Ref, Socket, Transport, Opts).
 
-init(_) ->
-    {ok, undefined}.
-
-init(Ref, Socket, Transport, _Opts) ->
+init({Ref, Socket, Transport, _Opts = []}) ->
     ack_otp_starting(Ref),
     {ok, Pid} = ct_gate_in:start_link(tcp),
     State = #state{
@@ -43,6 +38,7 @@ init(Ref, Socket, Transport, _Opts) ->
               },
     connection_active_once(State),
     gen_server:enter_loop(?MODULE, [], State).
+
 
 handle_info({tcp, Socket, Data},
             State=#state{socket=Socket, gate_in=Pid})
@@ -86,7 +82,7 @@ connection_close(#state{transport = Transport, socket = Socket}) ->
     Transport:close(Socket).
 
 ack_otp_starting(Ref) ->
-	%% ok = proc_lib:init_ack({ok, self()}),
+	ok = proc_lib:init_ack({ok, self()}),
 	ok = ranch:accept_ack(Ref).
 
 start_link_tcp_connection_server(Ref, Socket, Transport, Opts) ->
