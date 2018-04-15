@@ -32,14 +32,16 @@ init({Ref, Socket, Transport, _Opts = []}) ->
     lager:debug("init/1"),
     {ok, Pid} = ct_gate_in:start_link(tcp),
     lager:debug("got gate_in"),
+    ok = ranch:accept_ack(Ref),
+    lager:debug("ranch ack"),
     State = #state{
                gate_in = Pid,
                socket = Socket,
                transport = Transport
               },
-    ok = ranch:accept_ack(Ref),
+    lager:debug("state"),
     connection_active_once(State),
-    lager:debug("enter loop"),
+    lager:debug("active once"),
     gen_server:enter_loop(?MODULE, [], State).
 
 handle_info({tcp, Socket, Data},
