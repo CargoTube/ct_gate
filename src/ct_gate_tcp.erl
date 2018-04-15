@@ -10,8 +10,6 @@
 
 %% for tcp
 -export([start_link/4]).
--export([init/4]).
-
 
 %% gen_server.
 -export([init/1]).
@@ -30,8 +28,10 @@
 start_link(Ref, Socket, Transport, Opts) ->
      start_link_tcp_connection_server(Ref, Socket, Transport, Opts).
 
-init(Ref, Socket, Transport, _Opts = []) ->
+init({Ref, Socket, Transport, _Opts = []}) ->
+    lager:debug("init/1"),
     {ok, Pid} = ct_gate_in:start_link(tcp),
+    lager:debug("got gate_in"),
     State = #state{
                gate_in = Pid,
                socket = Socket,
@@ -39,6 +39,7 @@ init(Ref, Socket, Transport, _Opts = []) ->
               },
     ok = ranch:accept_ack(Ref),
     connection_active_once(State),
+    lager:debug("enter loop"),
     gen_server:enter_loop(?MODULE, [], State).
 
 handle_info({tcp, Socket, Data},
@@ -59,9 +60,6 @@ handle_info({tcp_error, _, Reason}, State) ->
 handle_info(_Info, State) ->
     {stop, normal, State}.
 
-
-init(_) ->
-    {ok, undefined}.
 
 handle_call(_, _, State) ->
     {reply, ignored, State}.
@@ -86,4 +84,4 @@ connection_close(#state{transport = Transport, socket = Socket}) ->
     Transport:close(Socket).
 
 start_link_tcp_connection_server(Ref, Socket, Transport, Opts) ->
-    {ok, proc_lib:start_link(?MODULE, init, [Ref, Socket, Transport, Opts])}.
+    {ok, proc_lib:start_link(?MODULE, init, [{Ref, Socket, Transport, Opts}])}.
