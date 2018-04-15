@@ -86,7 +86,7 @@ connection_close(#state{transport = Transport, socket = Socket}) ->
     Transport:close(Socket).
 
 ack_otp_starting(Ref) ->
-	ok = proc_lib:init_ack({ok, self()}),
+	%% ok = proc_lib:init_ack({ok, self()}),
 	ok = ranch:accept_ack(Ref).
 
 start_link_tcp_connection_server(Ref, Socket, Transport, Opts) ->
