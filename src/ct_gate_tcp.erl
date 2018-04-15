@@ -65,7 +65,6 @@ handle_cast(_, State) ->
     {noreply, State}.
 
 terminate(_Reason, State) ->
-    lager:debug("tcp terminate"),
     connection_close(State),
     ok.
 
@@ -78,7 +77,8 @@ connection_active_once(#state{transport = Transport, socket = Socket}) ->
 connection_send(Data, #state{transport = Transport, socket = Socket}) ->
     Transport:send(Socket, Data).
 
-connection_close(#state{transport = Transport, socket = Socket}) ->
+connection_close(#state{transport=Transport, socket=Socket, gate_in=Pid}) ->
+    gate_in:stop(Pid),
     Transport:close(Socket).
 
 spawn_link_tcp_connection_server(Ref, Socket, Transport, Opts) ->
