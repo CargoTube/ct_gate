@@ -4,8 +4,8 @@
 -module(ct_gate_tcp).
 -include_lib("ct_msg/include/ct_msg.hrl").
 
+-behaviour(gen_server).
 -behaviour(ranch_protocol).
--behaviour(gen_statem).
 
 
 %% for tcp
@@ -13,49 +13,77 @@
 -export([init/4]).
 
 
-%% gen_statem.
+%% gen_server.
 -export([init/1]).
--export([callback_mode/0]).
--export([handle_event/4]).
--export([terminate/3]).
--export([code_change/4]).
+-export([handle_call/3]).
+-export([handle_cast/2]).
+-export([handle_info/2]).
+-export([code_change/3]).
+-export([terminate/2]).
 
 
+-record(state, {gate_in = undefined,
+                socket = undefined,
+                transport = undefined
+               }).
 
-%% use the handle event function
-callback_mode() -> handle_event_function.
-
-
-%%% for TCP
 start_link(Ref, Socket, Transport, Opts) ->
-    start_link_tcp_connection_server(Ref, Socket, Transport, Opts).
+     start_link_tcp_connection_server(Ref, Socket, Transport, Opts).
 
 init(Ref, Socket, Transport, _Opts = []) ->
-    lager:debug("[~p] init tcp", [self()]),
-    ack_otp_starting(Ref),
-    Data = ct_gate_in:create_initial_tcp_data(Transport, Socket),
-    gen_statem:enter_loop(?MODULE, [], handshake, Data).
+    {ok, Pid} = ct_gate_in:start_link(tcp),
+    State = #state{
+               gate_in = Pid,
+               socket = Socket,
+               transport = Transport
+              },
+    ok = ranch:accept_ack(Ref),
+    connection_active_once(State),
+    gen_server:enter_loop(?MODULE, [], State).
+
+handle_info({tcp, Socket, Data},
+            State=#state{socket=Socket, gate_in=Pid})
+  when byte_size(Data) > 1 ->
+    ct_gate_in:handle_raw_data(Data, Pid),
+    {noreply, State};
+handle_info(connection_once, State) ->
+    connection_active_once(State),
+    {noreply, State};
+handle_info({connection_send, Data}, State) ->
+    connection_send(Data, State),
+    {noreply, State};
+handle_info({tcp_closed, _Socket}, State) ->
+    {stop, normal, State};
+handle_info({tcp_error, _, Reason}, State) ->
+    {stop, Reason, State};
+handle_info(_Info, State) ->
+    {stop, normal, State}.
 
 
-init(_Opts) ->
-    erlang:error("don't call").
+init(_) ->
+    {ok, undefined}.
 
+handle_call(_, _, State) ->
+    {reply, ignored, State}.
 
-ack_otp_starting(Ref) ->
-    ok = proc_lib:init_ack({ok, self()}),
-    ok = ranch:accept_ack(Ref).
+handle_cast(_, State) ->
+    {noreply, State}.
 
-handle_event(Type, Message, State, Data) ->
-    ct_gate_in:handle_event(Type, Message, State, Data).
-
-
-terminate(_Reason, _State, Data) ->
-    ct_gate_in:close_connection(Data),
+terminate(_Reason, State) ->
+    connection_close(State),
     ok.
 
-code_change(_OldVsn, State, Data, _Extra) ->
-    {ok, State, Data}.
+code_change(_OldVsn, State, _Extra) ->
+    {ok, State}.
 
+connection_active_once(#state{transport = Transport, socket = Socket}) ->
+    Transport:setopts(Socket, [{active, once}]).
+
+connection_send(Data, #state{transport = Transport, socket = Socket}) ->
+    Transport:send(Socket, Data).
+
+connection_close(#state{transport = Transport, socket = Socket}) ->
+    Transport:close(Socket).
 
 start_link_tcp_connection_server(Ref, Socket, Transport, Opts) ->
-    proc_lib:start_link(?MODULE, init, [Ref, Socket, Transport, Opts]).
+    {ok, proc_lib:start_link(?MODULE, init, [Ref, Socket, Transport, Opts])}.

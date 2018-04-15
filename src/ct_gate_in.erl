@@ -4,37 +4,28 @@
 
 -module(ct_gate_in).
 -include_lib("ct_msg/include/ct_msg.hrl").
+-behaviour(gen_statem).
 
 
 %%
--export([create_initial_tcp_data/2]).
--export([create_initial_ws_data/2]).
--export([close_connection/1]).
+-export([start_link/1]).
+-export([handle_raw_data/2]).
+-export([close_session/1]).
+-export([stop/1]).
+
 
 %% gen_statem.
+-export([init/1]).
+-export([callback_mode/0]).
 -export([handle_event/4]).
 -export([terminate/3]).
 -export([code_change/4]).
 
 
--record(tcp_data, {
-          socket,
-          transport,
-          ok,
-          closed,
-          error,
-          peer = undefined
-         }).
-
--record(ws_data, {
-          frametag = undefined,
-          state = undefined
-         }).
-
 -record(data, {
-          con = undefined,
+          def_state = expect_hello,
+          peer_pid = undefined,
           serializer = undefined,
-
           max_length = 0,
           buffer = <<"">>,
           message_queue = [],
@@ -46,36 +37,54 @@
          }).
 
 
-create_initial_tcp_data(Transport,Socket) ->
-    {Ok, Closed, Error} = Transport:messages(),
-    TcpData = #tcp_data{
-                 socket = Socket,
-                 transport = Transport,
-                 peer = get_peername(Socket),
-                 ok = Ok,
-                 closed = Closed,
-                 error = Error
-                },
-    create_initial_data(TcpData, undefined).
+start_link(tcp) ->
+    Data = create_initial_tcp_data(self()),
+    gen_statem:start_link(?MODULE, Data, []);
+start_link({ws, Serializer}) ->
+    Data = create_initial_ws_data(Serializer, self()),
+    gen_statem:start_link(?MODULE, Data, []).
 
 
-create_initial_ws_data(FrameTag, Serializer) ->
-    WsData = #ws_data{
-       frametag = FrameTag
-      },
-    create_initial_data(WsData, Serializer).
+create_initial_ws_data(Serializer, PeerPid) ->
+    create_initial_data(Serializer, PeerPid, expect_hello).
 
+create_initial_tcp_data(PeerPid) ->
+    create_initial_data(undefined, PeerPid, handshake).
 
-create_initial_data(ConData, Serializer) ->
-    Data = #data{
-       con = ConData,
+create_initial_data(Serializer, PeerPid, DefState) ->
+    #data{
+       def_state = DefState,
+       peer_pid = PeerPid,
        serializer = Serializer,
        session_id = undefined,
        router_if = application:get_env(ct_gate, router_if, ct_router_if_off)
-      },
-    activate_connection_once(Data),
-    Data.
+      }.
 
+handle_raw_data(Data, Pid) ->
+    gen_statem:cast(Pid, {raw_data, Data}).
+
+close_session(Pid) ->
+    gen_statem:call(Pid, session_close).
+
+stop(Pid) ->
+    gen_statem:cast(Pid, stop).
+
+%% use the handle event function
+callback_mode() -> handle_event_function.
+
+init(Data) ->
+    {ok, expect_hello, Data}.
+
+
+handle_event(cast, {raw_data, InData}, State, Data) ->
+    lager:debug("[~p] >>> ~p",[self(), InData]),
+    handle_raw_data(InData, State, Data);
+handle_event({call, {Peer, _} = From},
+             session_close, State, #data{peer_pid = Peer} = Data) ->
+    {next_state, State, reset_data_close_session(Data), [{reply, From, ok}]};
+
+handle_event(cast, stop, _State, Data) ->
+    close_connection(Data);
 
 handle_event(info, next_message, State,
              #data{message_queue = [ Message | Tail ]} = Data) ->
@@ -84,31 +93,9 @@ handle_event(info, next_message, State,
     NewData = Data#data{message_queue = Tail},
     lager:debug("[~p] --> ~p", [self(), Message]),
     handle_incoming_wamp_message(State, Type, Message, NewData);
-handle_event(info, next_message, State, #data{message_queue = [],
-                                              con = undefined
-                                             } = Data) ->
-    {next_state, State, Data};
 handle_event(info, next_message, State, #data{message_queue = []} = Data) ->
     activate_connection_once(Data),
     {next_state, State, Data};
-handle_event(info,
-             {tcp, Socket,
-              <<127, MaxLengthExp:4, SerializerNumber:4, 0, 0>> = TcpData},
-             handshake,
-             #data{con = #tcp_data{socket = Socket}} = Data) ->
-    lager:debug("[~p] >>> ~p", [self(), TcpData]),
-    handle_tcp_handshake_message(MaxLengthExp, SerializerNumber, Data );
-handle_event(info,
-             {tcp, S, TcpData},
-             State,
-             #data{con = #tcp_data{socket = S}} = Data) ->
-    lager:debug("[~p] >>> ~p",[self(), TcpData]),
-    handle_tcp_data(TcpData, State, Data);
-handle_event(info,
-             {tcp_closed, Socket},
-             _,
-             #data{con = #tcp_data{ socket = Socket }} = Data) ->
-    close_connection(Data);
 handle_event(info,
              {to_peer, Message},
              State,
@@ -120,6 +107,15 @@ handle_event(Event, Content, State, Data) ->
     {next_state, State, Data}.
 
 
+
+
+handle_raw_data(<< 127, MaxLengthExp:4, SerializerNumber:4, 0, 0>>,
+                handshake, Data) ->
+    handle_tcp_handshake_message(MaxLengthExp, SerializerNumber, Data);
+handle_raw_data(RawData, State, Data) ->
+    {Messages, NewData} = deserialize_messages_update_data(RawData, Data),
+    set_wamp_message_queue(Messages, State, NewData).
+
 handle_tcp_handshake_message(MaxLengthExp, SerializerNumber, Data) ->
     lager:debug("[~p] handle handshake", [self()]),
     Serializer = translate_serializer_number_to_name(SerializerNumber),
@@ -127,12 +123,6 @@ handle_tcp_handshake_message(MaxLengthExp, SerializerNumber, Data) ->
     send_handshake_reply(Serializer, Data),
     NewData = Data#data{ serializer = Serializer, max_length = MaxLength},
     activate_or_close_connection(Serializer, NewData).
-
-
-handle_tcp_data(TcpData, State, Data) ->
-    {Messages, NewData} = deserialize_messages_update_data(TcpData, Data),
-    set_wamp_message_queue(Messages, State, NewData).
-
 
 set_wamp_message_queue([], State, Data) ->
     activate_connection_once(Data),
@@ -145,14 +135,17 @@ set_wamp_message_queue(Messages, State, Data) ->
 handle_incoming_wamp_message(expect_hello, hello, Hello, Data) ->
     router_handle_hello(Hello, Data),
     {next_state, welcome_or_challenge, Data};
-handle_incoming_wamp_message(expect_hello, _Type, _Message, Data) ->
+handle_incoming_wamp_message(expect_hello, _Type, _Message,
+                             #data{ def_state = DefState} =  Data) ->
     serialize_and_send_to_peer(?ABORT(#{}, canceled), Data),
-    {next_state, handshake, reset_data_close_session(Data)};
-handle_incoming_wamp_message(established, goodbye, _Message, Data) ->
+    {next_state, DefState, reset_data_close_session(Data)};
+handle_incoming_wamp_message(established, goodbye, _Message,
+                             #data{ def_state = DefState} =  Data) ->
     serialize_and_send_to_peer(?GOODBYE(#{}, goodbye_and_out), Data),
-    {next_state, handshake, reset_data_close_session(Data)};
-handle_incoming_wamp_message(expect_goodbye, goodbye, _Message, Data) ->
-    {next_state, handshake, reset_data_close_session(Data)};
+    {next_state, DefState, reset_data_close_session(Data)};
+handle_incoming_wamp_message(expect_goodbye, goodbye, _Message,
+                             #data{ def_state = DefState} =  Data) ->
+    {next_state, DefState, reset_data_close_session(Data)};
 handle_incoming_wamp_message(established, Type, Message, Data)
   when Type == error; Type == publish; Type == subscribe;
        Type == unsubscribe; Type == call; Type == register; Type == unregister;
@@ -187,10 +180,11 @@ handle_outgoing_wamp_message(State, welcome, Welcome, Data)
     UpdatedData = set_session_id(Welcome, Data),
     serialize_and_send_to_peer(Welcome, UpdatedData),
     {next_state, established, UpdatedData};
-handle_outgoing_wamp_message(State, abort, Abort, Data)
+handle_outgoing_wamp_message(State, abort, Abort,
+                             #data{ def_state = DefState} =  Data)
   when State == welcome_or_challenge; State == welcome ->
     serialize_and_send_to_peer(Abort, Data),
-    {next_state, handshake, reset_data_close_session(Data)};
+    {next_state, DefState, reset_data_close_session(Data)};
 handle_outgoing_wamp_message(welcome_or_challenge, challenge, Clg, Data) ->
     serialize_and_send_to_peer(Clg, Data),
     {next_state, expect_authenticate, Data};
@@ -278,31 +272,22 @@ reset_data_close_session(Data) ->
     Data#data{
       max_length = 0,
       buffer = <<"">>,
-      con = undefined,
       session_id = undefined
      }.
+
+close_connection( Data ) ->
+    ok = router_handle_session_closed(Data),
+    {stop, normal, Data}.
 
 activate_or_close_connection(unsupported, Data) ->
     close_connection(Data);
 activate_or_close_connection(_, Data) ->
-    ok = activate_connection_once(Data),
+    activate_connection_once(Data),
     {next_state, expect_hello, Data}.
 
-close_connection( #data{ con = #tcp_data{ socket = Socket} } = Data) ->
-    lager:debug("[~p] connection closing", [self()]),
-    ok = router_handle_session_closed(Data),
-    ok = gen_tcp:close(Socket),
-    {stop, normal, Data};
-close_connection( #data{ con = undefined } = Data) ->
-    {stop, normal, Data}.
 
-
-activate_connection_once(#data{ con = #tcp_data{transport=Transport,
-                                                socket=Socket} }) ->
-    ok = Transport:setopts(Socket, [{active, once}]);
-activate_connection_once(#data{ con = #ws_data{}} ) ->
-    %% not needed for websocket
-    ok.
+activate_connection_once(#data{ peer_pid = Peer }) ->
+    Peer ! connection_once.
 
 serialize_and_send_to_peer(Msg,#data{serializer=Serializer}=Data) ->
     lager:debug("[~p] <-- ~p",[self(), Msg]),
@@ -310,19 +295,13 @@ serialize_and_send_to_peer(Msg,#data{serializer=Serializer}=Data) ->
     send_to_peer(OutMsg, Data).
 
 
-send_to_peer(Msg, #data{ con = #tcp_data{transport=Transport,
-                                         socket=Socket} }) ->
+send_to_peer(Msg, #data{ peer_pid = Peer }) ->
     lager:debug("[~p] <<< ~p",[self(), Msg]),
-    Transport:send(Socket,Msg).
-
-
-get_peername(Socket) ->
-    {ok, Peer} = inet:peername(Socket),
-    Peer.
+    Peer ! {connection_send, Msg}.
 
 
 terminate(_Reason, _State, Data) ->
-    close_connection(Data),
+    ok = router_handle_session_closed(Data),
     ok.
 
 code_change(_OldVsn, State, Data, _Extra) ->
