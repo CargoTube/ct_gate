@@ -300,8 +300,8 @@ send_to_peer(Msg, #data{ peer_pid = Peer }) ->
     Peer ! {connection_send, Msg}.
 
 
-terminate(Reason, _State, Data) ->
-    lager:debug("[~p] terminate",[self(), Reason]),
+terminate(_Reason, _State, Data) ->
+    lager:debug("[~p] terminate",[self()]),
     ok = router_handle_session_closed(Data),
     ok.
 
