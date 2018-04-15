@@ -37,19 +37,14 @@
          }).
 
 
-start_link(tcp) ->
-    Data = create_initial_tcp_data(self()),
-    gen_statem:start_link(?MODULE, Data, []);
-start_link({ws, Serializer}) ->
-    Data = create_initial_ws_data(Serializer, self()),
+start_link(Type) ->
+    Data = create_initial_data(Type),
     gen_statem:start_link(?MODULE, Data, []).
 
-
-create_initial_ws_data(Serializer, PeerPid) ->
-    create_initial_data(Serializer, PeerPid, expect_hello).
-
-create_initial_tcp_data(PeerPid) ->
-    create_initial_data(undefined, PeerPid, handshake).
+create_initial_data(tcp) ->
+    create_initial_data(undefined, self(), handshake);
+create_initial_data({ws, Serializer}) ->
+    create_initial_data(Serializer, self(), expect_hello).
 
 create_initial_data(Serializer, PeerPid, DefState) ->
     #data{
@@ -67,7 +62,7 @@ close_session(Pid) ->
     gen_statem:call(Pid, session_close).
 
 stop(Pid) ->
-    gen_statem:cast(Pid, stop).
+    gen_statem:stop(Pid).
 
 %% use the handle event function
 callback_mode() -> handle_event_function.
@@ -82,9 +77,6 @@ handle_event(cast, {raw_data, InData}, State, Data) ->
 handle_event({call, {Peer, _} = From},
              session_close, State, #data{peer_pid = Peer} = Data) ->
     {next_state, State, reset_data_close_session(Data), [{reply, From, ok}]};
-
-handle_event(cast, stop, _State, Data) ->
-    close_connection(Data);
 
 handle_event(info, next_message, State,
              #data{message_queue = [ Message | Tail ]} = Data) ->
