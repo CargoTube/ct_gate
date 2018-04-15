@@ -1,5 +1,5 @@
 %%
-%% Copyright (c) 2017 Bas Wegh
+%% Copyright (c) 2017-2018 Bas Wegh
 
 -module(ct_gate_tcp).
 -include_lib("ct_msg/include/ct_msg.hrl").
@@ -26,7 +26,7 @@
                }).
 
 start_link(Ref, Socket, Transport, Opts) ->
-     start_link_tcp_connection_server(Ref, Socket, Transport, Opts).
+     spawn_link_tcp_connection_server(Ref, Socket, Transport, Opts).
 
 init({Ref, Socket, Transport, _Opts = []}) ->
     ok = ranch:accept_ack(Ref),
@@ -38,7 +38,6 @@ init({Ref, Socket, Transport, _Opts = []}) ->
               },
     connection_active_once(State),
     gen_server:enter_loop(?MODULE, [], State).
-
 
 handle_info({tcp, Socket, Data},
             State=#state{socket=Socket, gate_in=Pid})
@@ -81,5 +80,5 @@ connection_send(Data, #state{transport = Transport, socket = Socket}) ->
 connection_close(#state{transport = Transport, socket = Socket}) ->
     Transport:close(Socket).
 
-start_link_tcp_connection_server(Ref, Socket, Transport, Opts) ->
-    {ok, proc_lib:start_link(?MODULE, init, [{Ref, Socket, Transport, Opts}])}.
+spawn_link_tcp_connection_server(Ref, Socket, Transport, Opts) ->
+    {ok, proc_lib:spawn_link(?MODULE, init, [{Ref, Socket, Transport, Opts}])}.
