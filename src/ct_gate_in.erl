@@ -72,8 +72,8 @@ stop(Pid) ->
 %% use the handle event function
 callback_mode() -> handle_event_function.
 
-init(Data) ->
-    {ok, expect_hello, Data}.
+init(#data{def_state = State} = Data) ->
+    {ok, State, Data}.
 
 
 handle_event(cast, {raw_data, InData}, State, Data) ->
@@ -300,7 +300,8 @@ send_to_peer(Msg, #data{ peer_pid = Peer }) ->
     Peer ! {connection_send, Msg}.
 
 
-terminate(_Reason, _State, Data) ->
+terminate(Reason, _State, Data) ->
+    lager:debug("[~p] terminate",[self(), Reason]),
     ok = router_handle_session_closed(Data),
     ok.
 
