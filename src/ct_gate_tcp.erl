@@ -65,6 +65,7 @@ handle_cast(_, State) ->
     {noreply, State}.
 
 terminate(_Reason, State) ->
+    lager:debug("tcp terminate"),
     connection_close(State),
     ok.
 
