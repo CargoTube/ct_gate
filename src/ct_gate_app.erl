@@ -59,7 +59,11 @@ tcp_options(UseSSL) ->
 
     Cert = application:get_env(ct_gate, tcp_cert_file, undefined),
     Key = application:get_env(ct_gate, tcp_key_file, undefined),
-    gen_options(Inet6, Inet6only, Port, Cert, Key, UseSSL).
+    options([{inet6, Inet6},
+             {inet6_only, Inet6only},
+             {port, Port},
+             {certfile, Cert},
+             {keyfile, Key}], [], UseSSL).
 
 
 
@@ -68,8 +72,6 @@ maybe_start_web_listener(true) ->
     SSL = web_use_ssl(),
     Name = ct_gate_web,
     ok = start_tls_or_clear(SSL, Name, web_options(SSL), web_dispatch()),
-    NumAcceptors = application:get_env(ct_gate, web_num_acceptors, 5),
-    ok = ranch:set_max_connections(Name, NumAcceptors),
     ok;
 maybe_start_web_listener(_) ->
     ok.
@@ -108,15 +110,16 @@ web_options(UseSSL) ->
 
     Cert = application:get_env(ct_gate, web_cert_file, undefined),
     Key = application:get_env(ct_gate, web_key_file, undefined),
-    gen_options(Inet6, Inet6only, Port, Cert, Key, UseSSL).
 
-
-gen_options(Inet6, Inet6only, Port, Cert, Key, UseSSL) ->
+    NumAcceptors = application:get_env(ct_gate, web_num_acceptors, 5),
     options([{inet6, Inet6},
              {inet6_only, Inet6only},
              {port, Port},
              {certfile, Cert},
-             {keyfile, Key}], [], UseSSL).
+             {keyfile, Key},
+             {num_acceptors, NumAcceptors}
+            ], [], UseSSL).
+
 
 options([], Options, _SSL) ->
     Options;
@@ -128,6 +131,8 @@ options([{inet6_only, true} | T], Options, SSL) ->
     options(T, [ {ipv6_v6only, true} | Options ], SSL);
 options([{inet6_only, false} | T], Options, SSL) ->
     options(T, [ {ipv6_v6only, false} | Options ], SSL);
+options([{num_acceptors, _} = Opt | T], Options, SSL) ->
+    options(T, [ Opt | Options ], SSL);
 
 %% SSL options
 options([ {certfile, undefined} | T ], Options, true) ->
