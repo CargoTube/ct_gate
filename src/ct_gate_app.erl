@@ -15,10 +15,10 @@
 %%====================================================================
 
 start(_StartType, _StartArgs) ->
-    StartTCP = application:get_env(ct_gate, enable_tcp, false),
+    StartTCP = application:get_env(ct_gate, tcp_enable, false),
     ok = maybe_start_tcp_listener(StartTCP),
 
-    StartWeb = application:get_env(ct_gate, enable_web, false),
+    StartWeb = application:get_env(ct_gate, web_enable, false),
     ok = maybe_start_web_listener(StartWeb),
     ct_gate_sup:start_link().
 
