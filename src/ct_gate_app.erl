@@ -93,14 +93,31 @@ start_tls_or_clear(false, Name, Options, Dispatch) ->
 
 
 web_dispatch() ->
-    Path = application:get_env(ct_gate, web_ws_path, "/"),
-    cowboy_router:compile(
-      [
-       {'_', [
-              {Path, ct_gate_ws, []}
-             ]}
-      ]).
+    cowboy_router:compile(web_routes()).
 
+
+web_routes() ->
+    WsPath = application:get_env(ct_gate, web_ws_path, "/"),
+    StaticDir = application:get_env(ct_gate, web_static_dir, undefined),
+    StaticPath = application:get_env(ct_gate, web_static_path, undefined),
+
+    PathList = web_path_list([
+                              {ws_path, WsPath},
+                              {static, StaticPath, StaticDir}
+                             ],
+                             []),
+    [{'_', PathList}].
+
+
+web_path_list([], List) ->
+    List;
+web_path_list([{ws_path, Path}|Tail], List) ->
+    web_path_list(Tail, [{Path, ct_gate_ws, []} | List]);
+web_path_list([{static, Path, Dir}|Tail], List)
+  when is_list(Path), is_list(Dir) ->
+    web_path_list(Tail, [{Path, cowboy_static, {dir, Dir}} | List]);
+web_path_list([{static, _Path, _Dir}|Tail], List) ->
+    web_path_list(Tail, List).
 
 
 web_options(UseSSL) ->
