@@ -128,6 +128,8 @@ path_to_pattern_list(Path, Dir) ->
     {ok, FileList} = file:list_dir(Dir),
     path_to_pattern_list(Path, FileList, Dir, []).
 
+path_to_pattern_list(_Path, [],  _Dir, PatternList) ->
+    PatternList;
 path_to_pattern_list(Path, [File | Tail],  Dir, PatternList) ->
     FilePath = filename:join(Path, File),
     FileDir = filename:join(Dir, File),
