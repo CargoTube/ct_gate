@@ -42,14 +42,14 @@ start_link(Type) ->
     gen_statem:start_link(?MODULE, Data, []).
 
 create_initial_data(tcp) ->
-    create_initial_data(undefined, self(), handshake);
+    create_initial_data(undefined, handshake);
 create_initial_data({ws, Serializer}) ->
-    create_initial_data(Serializer, self(), expect_hello).
+    create_initial_data(Serializer, expect_hello).
 
-create_initial_data(Serializer, PeerPid, DefState) ->
+create_initial_data(Serializer, DefState) ->
     #data{
        def_state = DefState,
-       peer_pid = PeerPid,
+       peer_pid = self(),
        serializer = Serializer,
        session_id = undefined,
        router_if = application:get_env(ct_gate, router_if, ct_router_if_off)

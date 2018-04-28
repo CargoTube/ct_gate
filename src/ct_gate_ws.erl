@@ -8,6 +8,7 @@
 
 
 -export([init/2]).
+-export([websocket_init/1]).
 -export([websocket_handle/2]).
 -export([websocket_info/2]).
 -export([terminate/3]).
@@ -23,7 +24,8 @@
 
 -record(state, {
           gate_in = undefined,
-          tag = undefined
+          tag = undefined,
+          serializer = undefined
          }).
 
 init( Req, _State) ->
@@ -31,6 +33,10 @@ init( Req, _State) ->
     Protocols = cowboy_req:parse_header(?SUBPROTHEADER, Req),
     {FrameTag, Serializer, Header} = find_supported_protocol(Protocols),
     handle_supported_protocol(FrameTag, Serializer, Header, Req).
+
+websocket_init(#state{serializer = Serializer} = State) ->
+    {ok, GateIn} = ct_gate_in:start_link({ws, Serializer}),
+    {ok, State#state{gate_in = GateIn}}.
 
 
 websocket_handle({Tag, InData}, #state{tag = Tag, gate_in  = GateIn} = State) ->
@@ -59,9 +65,8 @@ terminate(_Reason, _PartialReq, #state{gate_in = GateIn}) ->
 handle_supported_protocol(none, _, _, Req) ->
     {shutdown, Req};
 handle_supported_protocol(FrameTag, Serializer, Header, Req) ->
-    {ok, GateIn} = ct_gate_in:start_link({ws, Serializer}),
     Req1  = cowboy_req:set_resp_header(?SUBPROTHEADER, Header, Req),
-    {cowboy_websocket, Req1, #state{tag = FrameTag, gate_in = GateIn}}.
+    {cowboy_websocket, Req1, #state{tag = FrameTag, serializer = Serializer}}.
 
 
 -spec find_supported_protocol([binary()]) -> ProtocolOrError
