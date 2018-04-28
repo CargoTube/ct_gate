@@ -13,7 +13,7 @@
 -export([websocket_info/2]).
 -export([terminate/3]).
 
--define(TIMEOUT,90000).
+-define(TIMEOUT,300000).
 
 -define(SUBPROTHEADER,<<"sec-websocket-protocol">>).
 -define(WSMSGPACK,<<"wamp.2.msgpack">>).
