@@ -119,7 +119,7 @@ web_path_list([{static, Path, Dir}|Tail], List)
     BinDir = list_to_binary(Dir),
     BinPath = list_to_binary(Path),
     PatternList = path_to_pattern_list(BinPath, BinDir),
-    web_path_list(Tail, [ PatternList | List]);
+    web_path_list(Tail,  PatternList ++ List);
 web_path_list([{static, _Path, _Dir}|Tail], List) ->
     web_path_list(Tail, List).
 
@@ -139,15 +139,10 @@ path_to_pattern_list(Path, [File | Tail],  Dir, PatternList) ->
 add_file_to_pattern_list(FilePath, regular, FileDir, PatternList) ->
     [{FilePath, cowboy_static, {file, FileDir}} | PatternList];
 add_file_to_pattern_list(DirPath, directory, FileDir, PatternList) ->
-    Pattern = dir_to_pattern(DirPath),
+    Pattern = dir_to_pattern(DirPath, binary:last(DirPath)),
     [{Pattern, cowboy_static, {dir, FileDir}} | PatternList];
 add_file_to_pattern_list(_File, _Type, _Dir, PatternList) ->
     PatternList.
-
-
-dir_to_pattern(Dir) when is_list(Dir) ->
-    BinDir = list_to_binary(Dir),
-    dir_to_pattern(BinDir, binary:last(BinDir)).
 
 dir_to_pattern(BinDir, $/) ->
     Pattern = <<"[...]">>,
