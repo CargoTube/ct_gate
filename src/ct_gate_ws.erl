@@ -13,7 +13,7 @@
 -export([websocket_info/2]).
 -export([terminate/3]).
 
--define(TIMEOUT,60000).
+-define(TIMEOUT,90000).
 
 -define(SUBPROTHEADER,<<"sec-websocket-protocol">>).
 -define(WSMSGPACK,<<"wamp.2.msgpack">>).
@@ -64,7 +64,12 @@ handle_supported_protocol(none, _, _, Req) ->
     {shutdown, Req};
 handle_supported_protocol(FrameTag, Serializer, Header, Req) ->
     Req1  = cowboy_req:set_resp_header(?SUBPROTHEADER, Header, Req),
-    {cowboy_websocket, Req1, #state{tag = FrameTag, serializer = Serializer}}.
+    State = #state{tag = FrameTag, serializer = Serializer},
+    Timeout = application:get_env(ct_gate, web_ws_timeout, ?TIMEOUT),
+    Opts = #{compress => true,
+             idle_timeout => Timeout,
+             max_frame_size => infinity},
+    {cowboy_websocket, Req1, State, Opts}.
 
 
 -spec find_supported_protocol([binary()]) -> ProtocolOrError
