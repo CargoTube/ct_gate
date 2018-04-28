@@ -140,7 +140,7 @@ path_to_pattern_list(Path, [File | Tail],  Dir, PatternList) ->
 add_file_to_pattern_list(File, Path, regular, FileDir, PatternList) ->
     FilePath = filename:join(Path, File),
     NewPatternList = [{FilePath, cowboy_static, {file, FileDir}} | PatternList],
-    maybe_add_path(File, Path, FileDir, NewPatternList) ;
+    maybe_add_path(File, Path, FileDir, NewPatternList);
 add_file_to_pattern_list(Dir, Path, directory, FileDir, PatternList) ->
     DirPath = filename:join(Path, Dir),
     Pattern = dir_to_pattern(DirPath, binary:last(DirPath)),

@@ -40,13 +40,15 @@ websocket_handle({ping, _Payload}, State) ->
     {ok, State};
 websocket_handle({pong, _Payload}, State) ->
     {ok, State};
-websocket_handle(_Frame, State) ->
+websocket_handle(Frame, State) ->
+    lager:debug("ws in received unhandled frame ~p",[Frame]),
     {ok, State}.
 
 
 websocket_info({connection_send, Data}, State) ->
     {reply, Data, State};
-websocket_info(_Info, State) ->
+websocket_info(Info, State) ->
+    lager:debug("ws in received unhandled info ~p",[Info]),
     {ok, State}.
 
 terminate(_Reason, _PartialReq, #state{gate_in = GateIn}) ->
