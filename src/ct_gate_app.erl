@@ -106,6 +106,7 @@ web_routes() ->
                               {static, StaticPath, StaticDir}
                              ],
                              []),
+    lager:debug("web pathlist: ~p", [PathList]),
     [{'_', PathList}].
 
 
@@ -115,9 +116,22 @@ web_path_list([{ws_path, Path}|Tail], List) ->
     web_path_list(Tail, [{Path, ct_gate_ws, []} | List]);
 web_path_list([{static, Path, Dir}|Tail], List)
   when is_list(Path), is_list(Dir) ->
-    web_path_list(Tail, [{Path, cowboy_static, {dir, Dir}} | List]);
+    Pattern = dir_to_pattern(Dir),
+    web_path_list(Tail, [{Path, cowboy_static, {dir, Pattern}} | List]);
 web_path_list([{static, _Path, _Dir}|Tail], List) ->
     web_path_list(Tail, List).
+
+dir_to_pattern(Dir) when is_list(Dir) ->
+    BinDir = binary_to_list(Dir),
+    dir_to_pattern(BinDir, binary:last(BinDir)).
+
+dir_to_pattern(BinDir, $/) ->
+    Pattern = <<"[...]">>,
+    << BinDir/binary, Pattern/binary>>;
+dir_to_pattern(BinDir, _) ->
+    Slash = <<"/">>,
+    WithSlash = << BinDir/binary, Slash/binary >>,
+    dir_to_pattern(WithSlash, $/).
 
 
 web_options(UseSSL) ->
