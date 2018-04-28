@@ -122,7 +122,7 @@ web_path_list([{static, _Path, _Dir}|Tail], List) ->
     web_path_list(Tail, List).
 
 dir_to_pattern(Dir) when is_list(Dir) ->
-    BinDir = binary_to_list(Dir),
+    BinDir = list_to_binary(Dir),
     dir_to_pattern(BinDir, binary:last(BinDir)).
 
 dir_to_pattern(BinDir, $/) ->
