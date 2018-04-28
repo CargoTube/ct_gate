@@ -51,8 +51,8 @@ websocket_handle(Frame, State) ->
     {ok, State}.
 
 
-websocket_info({connection_send, Data}, State) ->
-    {reply, Data, State};
+websocket_info({connection_send, Data}, #state{tag = FrameTag} = State) ->
+    {reply, {FrameTag, Data}, State};
 websocket_info(Info, State) ->
     lager:debug("ws in received unhandled info ~p",[Info]),
     {ok, State}.
