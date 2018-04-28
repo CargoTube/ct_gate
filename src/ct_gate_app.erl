@@ -131,20 +131,29 @@ path_to_pattern_list(Path, Dir) ->
 path_to_pattern_list(_Path, [],  _Dir, PatternList) ->
     PatternList;
 path_to_pattern_list(Path, [File | Tail],  Dir, PatternList) ->
-    FilePath = filename:join(Path, File),
     FileDir = filename:join(Dir, File),
     {ok, #file_info{type = Type}} = file:read_file_info(FileDir),
-    NewPatternList = add_file_to_pattern_list(FilePath, Type, FileDir,
+    NewPatternList = add_file_to_pattern_list(File, Path, Type, FileDir,
                                               PatternList),
     path_to_pattern_list(Path, Tail, Dir, NewPatternList).
 
-add_file_to_pattern_list(FilePath, regular, FileDir, PatternList) ->
-    [{FilePath, cowboy_static, {file, FileDir}} | PatternList];
-add_file_to_pattern_list(DirPath, directory, FileDir, PatternList) ->
+add_file_to_pattern_list(File, Path, regular, FileDir, PatternList) ->
+    FilePath = filename:join(Path, File),
+    NewPatternList = [{FilePath, cowboy_static, {file, FileDir}} | PatternList],
+    maybe_add_path(File, Path, FileDir, NewPatternList) ;
+add_file_to_pattern_list(Dir, Path, directory, FileDir, PatternList) ->
+    DirPath = filename:join(Path, Dir),
     Pattern = dir_to_pattern(DirPath, binary:last(DirPath)),
     [{Pattern, cowboy_static, {dir, FileDir}} | PatternList];
-add_file_to_pattern_list(_File, _Type, _Dir, PatternList) ->
+add_file_to_pattern_list(_File, _Path, _Type, _Dir, PatternList) ->
     PatternList.
+
+
+maybe_add_path(<<"index.html">>, Path, FileDir, List) ->
+    [{Path, cowboy_static, {file, FileDir}} | List];
+maybe_add_path(_, _, _, List) ->
+    List.
+
 
 dir_to_pattern(BinDir, $/) ->
     Pattern = <<"[...]">>,
