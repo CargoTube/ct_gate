@@ -2,8 +2,8 @@
 %% @doc ct_gate public API
 %% @end
 %%%-------------------------------------------------------------------
-
 -module(ct_gate_app).
+-include_lib("kernel/include/file.hrl").
 
 -behaviour(application).
 
@@ -116,10 +116,34 @@ web_path_list([{ws_path, Path}|Tail], List) ->
     web_path_list(Tail, [{Path, ct_gate_ws, []} | List]);
 web_path_list([{static, Path, Dir}|Tail], List)
   when is_list(Path), is_list(Dir) ->
-    Pattern = dir_to_pattern(Dir),
-    web_path_list(Tail, [{Path, cowboy_static, {dir, Pattern}} | List]);
+    BinDir = list_to_binary(Dir),
+    BinPath = list_to_binary(Path),
+    PatternList = path_to_pattern_list(BinPath, BinDir),
+    web_path_list(Tail, [ PatternList | List]);
 web_path_list([{static, _Path, _Dir}|Tail], List) ->
     web_path_list(Tail, List).
+
+path_to_pattern_list(Path, Dir) ->
+    file:make_dir(Dir),
+    {ok, FileList} = file:list_dir(Dir),
+    path_to_pattern_list(Path, FileList, Dir, []).
+
+path_to_pattern_list(Path, [File | Tail],  Dir, PatternList) ->
+    FilePath = filename:join(Path, File),
+    FileDir = filename:join(Dir, File),
+    {ok, #file_info{type = Type}} = file:read_file_info(FileDir),
+    NewPatternList = add_file_to_pattern_list(FilePath, Type, FileDir,
+                                              PatternList),
+    path_to_pattern_list(Path, Tail, Dir, NewPatternList).
+
+add_file_to_pattern_list(FilePath, regular, FileDir, PatternList) ->
+    [{FilePath, cowboy_static, {file, FileDir}} | PatternList];
+add_file_to_pattern_list(DirPath, directory, FileDir, PatternList) ->
+    Pattern = dir_to_pattern(DirPath),
+    [{Pattern, cowboy_static, {dir, FileDir}} | PatternList];
+add_file_to_pattern_list(_File, _Type, _Dir, PatternList) ->
+    PatternList.
+
 
 dir_to_pattern(Dir) when is_list(Dir) ->
     BinDir = list_to_binary(Dir),
