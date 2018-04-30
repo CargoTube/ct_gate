@@ -124,9 +124,8 @@ web_path_list([{static, _Path, _Dir}|Tail], List) ->
     web_path_list(Tail, List).
 
 path_to_pattern_list(Path, Dir) ->
-    file:make_dir(Dir),
-    {ok, FileList} = file:list_dir(Dir),
-    path_to_pattern_list(Path, FileList, Dir, []).
+    Result = file:list_dir(Dir),
+    path_to_pattern_list(Path, Result, Dir, []).
 
 path_to_pattern_list(_Path, [],  _Dir, PatternList) ->
     PatternList;
@@ -135,7 +134,12 @@ path_to_pattern_list(Path, [File | Tail],  Dir, PatternList) ->
     {ok, #file_info{type = Type}} = file:read_file_info(FileDir),
     NewPatternList = add_file_to_pattern_list(File, Path, Type, FileDir,
                                               PatternList),
-    path_to_pattern_list(Path, Tail, Dir, NewPatternList).
+    path_to_pattern_list(Path, Tail, Dir, NewPatternList);
+path_to_pattern_list(Path, {ok, FileList},  Dir, PatternList) ->
+    path_to_pattern_list(Path, FileList, Dir, PatternList);
+path_to_pattern_list(_Path, {error, _Reason},  _Dir, _PatternList) ->
+    [].
+
 
 add_file_to_pattern_list(File, Path, regular, FileDir, PatternList) ->
     FilePath = filename:join(Path, File),
