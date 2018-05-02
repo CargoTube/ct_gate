@@ -87,6 +87,8 @@ add_file_to_pattern_list(_File, _Path, _Type, _Dir, PatternList) ->
     PatternList.
 
 
+maybe_add_path(File, Path, FileDir, List) when is_list(File) ->
+    maybe_add_path(list_to_binary(File), Path, FileDir, List);
 maybe_add_path(<<"index.html">>, Path, FileDir, List) ->
     [{Path, cowboy_static, {file, FileDir}} | List];
 maybe_add_path(_, _, _, List) ->
