@@ -37,11 +37,11 @@ clean_options(Options) ->
     maybe_remove_ipv6(IPv6, Options).
 
 maybe_remove_ipv6(false, Options) ->
-    Keys = [inet6, inet6_only],
-    Delete = fun(Key, Opts) ->
-                     lists:keydelete(Key, 1, Opts)
+    Entries = [inet6, {inetv6_v6only, false}, {inetv6_v6only, true}],
+    Delete = fun(Entry, Opts) ->
+                     lists:delete(Entry, Opts)
              end,
-    lists:foldl(Delete, Options, Keys);
+    lists:foldl(Delete, Options, Entries);
 maybe_remove_ipv6(_, Options) ->
     Options.
 
