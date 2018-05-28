@@ -37,7 +37,7 @@ clean_options(Options) ->
     maybe_remove_ipv6(IPv6, Options).
 
 maybe_remove_ipv6(false, Options) ->
-    Entries = [inet6, {inetv6_v6only, false}, {inetv6_v6only, true}],
+    Entries = [inet6, {ipv6_v6only, false}, {ipv6_v6only, true}],
     Delete = fun(Entry, Opts) ->
                      lists:delete(Entry, Opts)
              end,
