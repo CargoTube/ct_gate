@@ -14,7 +14,7 @@ maybe_start_web_listener(true) ->
     Name = ct_gate_web,
     Options = web_options(SSL),
     Dispatch = web_dispatch(),
-    ok = ctg_con_utils:start_tls_or_clear(SSL, Name, Options, Dispatch),
+    ok = start_tls_or_clear(SSL, Name, Options, Dispatch),
     ok;
 maybe_start_web_listener(_) ->
     ok.
@@ -120,3 +120,12 @@ web_options(UseSSL) ->
                            {keyfile, Key},
                            {num_acceptors, NumAcceptors}
                           ], [], UseSSL).
+
+start_tls_or_clear(true, Name, Options, Dispatch) ->
+    {ok, _} = cowboy:start_tls(Name, Options,
+                                 #{ env => #{dispatch => Dispatch}}),
+    ok;
+start_tls_or_clear(false, Name, Options, Dispatch) ->
+    {ok, _} = cowboy:start_clear(Name, Options,
+                                 #{ env => #{dispatch => Dispatch}}),
+    ok.

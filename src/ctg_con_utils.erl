@@ -1,25 +1,13 @@
 -module(ctg_con_utils).
 
 -export([
-         start_tls_or_clear/4,
          options/3,
          use_ssl/2
         ]).
 
-start_tls_or_clear(true, Name, Options, Dispatch) ->
-    {ok, _} = cowboy:start_tls(Name, Options,
-                                 #{ env => #{dispatch => Dispatch}}),
-    ok;
-start_tls_or_clear(false, Name, Options, Dispatch) ->
-    {ok, _} = cowboy:start_clear(Name, Options,
-                                 #{ env => #{dispatch => Dispatch}}),
-    ok.
-
-
-
 
 options([], Options, _SSL) ->
-    Options;
+    clean_options(Options);
 options([{port, _} = Port | T], Options, SSL) ->
     options(T, [ Port | Options ], SSL);
 options([{inet6, true} | T], Options, SSL) ->
@@ -43,6 +31,20 @@ options([ {keyfile, _} = Key | T ], Options, true) ->
 
 options([ _ | T ], Options, SSL) ->
     options(T, Options, SSL).
+
+clean_options(Options) ->
+    IPv6 = lists:keyfind(inet6, 1, Options),
+    maybe_remove_ipv6(IPv6, Options).
+
+maybe_remove_ipv6({inet6, false}, Options) ->
+    Keys = [inet6, inet6_only],
+    Delete = fun(Key, Opts) ->
+                     lists:keydelete(Key, 1, Opts)
+             end,
+    lists:foldl(Delete, Options, Keys);
+maybe_remove_ipv6(_, Options) ->
+    Options.
+
 
 
 use_ssl(Cert, Key) ->
