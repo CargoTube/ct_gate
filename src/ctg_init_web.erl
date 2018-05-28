@@ -1,4 +1,4 @@
--module(ctg_web_init).
+-module(ctg_init_web).
 -include_lib("kernel/include/file.hrl").
 
 -export([start/0]).

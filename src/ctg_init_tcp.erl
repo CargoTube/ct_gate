@@ -1,4 +1,4 @@
--module(ctg_tcp_init).
+-module(ctg_init_tcp).
 
 -export([start/0]).
 

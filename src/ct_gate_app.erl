@@ -14,8 +14,8 @@
 %%====================================================================
 
 start(_StartType, _StartArgs) ->
-    ok = ctg_web_init:start(),
-    ok = ctg_tcp_init:start(),
+    ok = ctg_init_web:start(),
+    ok = ctg_init_tcp:start(),
 
     ct_gate_sup:start_link().
 
