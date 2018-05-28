@@ -31,7 +31,7 @@ tcp_procotol(_) ->
 
 tcp_options(UseSSL) ->
     Port = application:get_env(ct_gate, tcp_port, 5555),
-    Inet6 = application:get_env(ct_gate, tcp_inet6, true),
+    Inet6 = application:get_env(ct_gate, tcp_inet6, false),
     Inet6only = application:get_env(ct_gate, tcp_inet6only, false),
 
     Cert = application:get_env(ct_gate, tcp_cert_file, undefined),

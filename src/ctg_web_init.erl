@@ -106,7 +106,7 @@ dir_to_pattern(BinDir, _) ->
 
 web_options(UseSSL) ->
     Port = application:get_env(ct_gate, web_port, 8080),
-    Inet6 = application:get_env(ct_gate, web_inet6, true),
+    Inet6 = application:get_env(ct_gate, web_inet6, false),
     Inet6only = application:get_env(ct_gate, web_inet6only, false),
 
     Cert = application:get_env(ct_gate, web_cert_file, undefined),

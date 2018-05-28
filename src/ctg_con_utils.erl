@@ -33,10 +33,10 @@ options([ _ | T ], Options, SSL) ->
     options(T, Options, SSL).
 
 clean_options(Options) ->
-    IPv6 = lists:keyfind(inet6, 1, Options),
+    IPv6 = lists:member(inet6, Options),
     maybe_remove_ipv6(IPv6, Options).
 
-maybe_remove_ipv6({inet6, false}, Options) ->
+maybe_remove_ipv6(false, Options) ->
     Keys = [inet6, inet6_only],
     Delete = fun(Key, Opts) ->
                      lists:keydelete(Key, 1, Opts)
