@@ -84,7 +84,11 @@ handle_event(info, next_message, State,
     Type = ct_msg:get_type(Message),
     NewData = Data#data{message_queue = Tail},
     lager:debug("[~p] --> ~p", [self(), Message]),
-    handle_incoming_wamp_message(State, Type, Message, NewData);
+    {Time, Result} = timer:tc(fun handle_incoming_wamp_message/4, [State, Type,
+                                                                   Message,
+                                                                   NewData]),
+    lager:info("gate message: ~p ms", [Time/1000]),
+    Result;
 handle_event(info, next_message, State, #data{message_queue = []} = Data) ->
     activate_connection_once(Data),
     {next_state, State, Data};
