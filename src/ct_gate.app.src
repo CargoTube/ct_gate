@@ -13,6 +13,7 @@
     ranch,
     lager,
     cowboy,
+    ct_stats,
     ct_router_if,
     ct_msg
    ]},

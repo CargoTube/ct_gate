@@ -87,7 +87,7 @@ handle_event(info, next_message, State,
     {Time, Result} = timer:tc(fun handle_incoming_wamp_message/4, [State, Type,
                                                                    Message,
                                                                    NewData]),
-    lager:info("gate message: ~p ms", [Time/1000]),
+    ctg_stats:add(Type, Time),
     Result;
 handle_event(info, next_message, State, #data{message_queue = []} = Data) ->
     activate_connection_once(Data),
@@ -155,7 +155,6 @@ handle_incoming_wamp_message(State, ping, {ping, Payload}, Data) ->
     {next_state, State, Data};
 handle_incoming_wamp_message(State, pong, {pong, Payload},
                              #data{ ping_payload = Payload } = Data) ->
-    %% TODO: calculate ping time
     {next_state, State, Data};
 handle_incoming_wamp_message(State, pong, _, Data) ->
     %% bad/old pong reply - just ignore it
