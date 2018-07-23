@@ -207,7 +207,7 @@ handle_outgoing_wamp_message(State, _Type, Message, Data) ->
 set_session_id(Welcome, #data{peer_ip = IP, peer_port = Port } = Data) ->
     {ok, SessionId} = ct_msg:extract_session(Welcome),
     lager:debug("[~p] SessionId: ~p", [self(), SessionId]),
-    lager:debug("[~p] Peer: ~p ~p", [IP, Port]),
+    lager:debug("[~p] Peer: ~p ~p", [self(), IP, Port]),
     Data#data{session_id = SessionId}.
 
 
