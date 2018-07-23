@@ -25,7 +25,9 @@
 -record(state, {
           gate_in = undefined,
           tag = undefined,
-          serializer = undefined
+          serializer = undefined,
+          peer_ip = undefined,
+          peer_port = undefined
          }).
 
 init( Req, _State) ->
@@ -34,8 +36,9 @@ init( Req, _State) ->
     {FrameTag, Serializer, Header} = find_supported_protocol(Protocols),
     handle_supported_protocol(FrameTag, Serializer, Header, Req).
 
-websocket_init(#state{serializer = Serializer} = State) ->
-    {ok, GateIn} = ct_gate_in:start_link({ws, Serializer}),
+websocket_init(#state{serializer = Serializer, peer_ip = IP,
+                      peer_port = Port} = State) ->
+    {ok, GateIn} = ct_gate_in:start_link({ws, Serializer, IP, Port}),
     {ok, State#state{gate_in = GateIn}}.
 
 
@@ -63,8 +66,12 @@ terminate(_Reason, _PartialReq, #state{gate_in = GateIn}) ->
 handle_supported_protocol(none, _, _, Req) ->
     {shutdown, Req};
 handle_supported_protocol(FrameTag, Serializer, Header, Req) ->
+    #{peer := {IP, Port}} = Req,
     Req1  = cowboy_req:set_resp_header(?SUBPROTHEADER, Header, Req),
-    State = #state{tag = FrameTag, serializer = Serializer},
+    State = #state{tag = FrameTag,
+                   serializer = Serializer,
+                   peer_ip = IP,
+                   peer_port = Port},
     Timeout = application:get_env(ct_gate, web_ws_timeout, ?TIMEOUT),
     Opts = #{compress => true,
              idle_timeout => Timeout,

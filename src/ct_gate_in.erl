@@ -33,7 +33,9 @@
           router_if = undefined,
           ping_time = undefined,
           ping_payload = undefined,
-          peer = undefined
+          transport = undefined,
+          peer_ip = undefined,
+          peer_port = undefined
          }).
 
 
@@ -41,17 +43,20 @@ start_link(Type) ->
     Data = create_initial_data(Type),
     gen_statem:start_link(?MODULE, Data, []).
 
-create_initial_data(tcp) ->
-    create_initial_data(undefined, handshake);
-create_initial_data({ws, Serializer}) ->
-    create_initial_data(Serializer, expect_hello).
+create_initial_data({tcp, IP, Port}) ->
+    create_initial_data(undefined, handshake, rawtcp, IP, Port);
+create_initial_data({ws, Serializer, IP, Port}) ->
+    create_initial_data(Serializer, expect_hello, ws, IP, Port).
 
-create_initial_data(Serializer, DefState) ->
+create_initial_data(Serializer, DefState, Transport, IP, Port) ->
     #data{
        def_state = DefState,
        peer_pid = self(),
        serializer = Serializer,
+       transport = Transport,
        session_id = undefined,
+       peer_ip = IP,
+       peer_port = Port,
        router_if = application:get_env(ct_gate, router_if, ct_router_if_off)
       }.
 

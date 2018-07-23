@@ -30,7 +30,8 @@ start_link(Ref, Socket, Transport, Opts) ->
 
 init({Ref, Socket, Transport, _Opts = []}) ->
     ok = ranch:accept_ack(Ref),
-    {ok, Pid} = ct_gate_in:start_link(tcp),
+    {ok, {IP, Port}} = Transport:peername(Socket),
+    {ok, Pid} = ct_gate_in:start_link({tcp, IP, Port}),
     State = #state{
                gate_in = Pid,
                socket = Socket,
