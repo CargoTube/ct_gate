@@ -316,9 +316,8 @@ code_change(_OldVsn, State, Data, _Extra) ->
 
 router_handle_hello(Hello, #data{router_if = RouterIf, transport = TransType,
                                  peer_ip = PeerIp, peer_port = PeerPort}) ->
-    _ = #{peer_ip => PeerIp, peer_port => PeerPort, type => TransType},
-    ct_router_if:handle_hello(Hello, RouterIf).
-    %% ct_router_if:handle_hello(Hello, RouterIf, Transport).
+    Transport = #{peer_ip => PeerIp, peer_port => PeerPort, type => TransType},
+    ct_router_if:handle_hello(Hello, RouterIf, Transport).
 
 router_handle_established_message(Message, #data{router_if = RouterIf,
                                                  session_id = SessionId}) ->
