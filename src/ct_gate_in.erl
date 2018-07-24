@@ -316,7 +316,8 @@ code_change(_OldVsn, State, Data, _Extra) ->
 
 router_handle_hello(Hello, #data{router_if = RouterIf, transport = TransType,
                                  peer_ip = PeerIp, peer_port = PeerPort}) ->
-    Transport = #{peer_ip => PeerIp, peer_port => PeerPort, type => TransType},
+    Transport = #{peer_ip => convert_ip(PeerIp), peer_port => PeerPort,
+                  type => TransType},
     ct_router_if:handle_hello(Hello, RouterIf, Transport).
 
 router_handle_established_message(Message, #data{router_if = RouterIf,
@@ -328,3 +329,6 @@ router_handle_session_closed(#data{session_id = undefined}) ->
 router_handle_session_closed(#data{router_if = RouterIf,
                                    session_id = SessionId}) ->
     ct_router_if:handle_session_closed(SessionId, RouterIf).
+
+convert_ip({A,B,C,D}) ->
+    list_to_binary(io_lib:format("~p.~p.~p.~p",[A, B, C, D])).
