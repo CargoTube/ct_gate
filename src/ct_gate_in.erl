@@ -315,9 +315,10 @@ code_change(_OldVsn, State, Data, _Extra) ->
 %% generic router handling
 
 router_handle_hello(Hello, #data{router_if = RouterIf, transport = TransType,
-                                 peer_ip = PeerIp, peer_port = PeerPort}) ->
+                                 peer_ip = PeerIp, peer_port = PeerPort,
+                                 serializer = Protocol}) ->
     Transport = #{peer_ip => convert_ip(PeerIp), peer_port => PeerPort,
-                  type => TransType},
+                  type => TransType, protocol => Protocol },
     ct_router_if:handle_hello(Hello, RouterIf, Transport).
 
 router_handle_established_message(Message, #data{router_if = RouterIf,
