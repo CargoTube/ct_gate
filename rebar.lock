@@ -1,6 +1,6 @@
 {"1.1.0",
-[{<<"cowboy">>,{pkg,<<"cowboy">>,<<"2.3.0">>},0},
- {<<"cowlib">>,{pkg,<<"cowlib">>,<<"2.2.1">>},1},
+[{<<"cowboy">>,{pkg,<<"cowboy">>,<<"2.4.0">>},0},
+ {<<"cowlib">>,{pkg,<<"cowlib">>,<<"2.3.0">>},1},
  {<<"ct_msg">>,
   {git,"https://github.com/CargoTube/ct_msg.git",
        {ref,"9a2d2dcd514dc34e28e38288db477279c72a22bf"}},
@@ -16,17 +16,17 @@
  {<<"eper">>,{pkg,<<"eper">>,<<"0.99.1">>},0},
  {<<"goldrush">>,{pkg,<<"goldrush">>,<<"0.1.9">>},1},
  {<<"jsone">>,{pkg,<<"jsone">>,<<"1.4.7">>},1},
- {<<"lager">>,{pkg,<<"lager">>,<<"3.5.1">>},0},
+ {<<"lager">>,{pkg,<<"lager">>,<<"3.6.4">>},0},
  {<<"msgpack">>,{pkg,<<"msgpack">>,<<"0.7.0">>},1},
- {<<"ranch">>,{pkg,<<"ranch">>,<<"1.4.0">>},0}]}.
+ {<<"ranch">>,{pkg,<<"ranch">>,<<"1.5.0">>},0}]}.
 [
 {pkg_hash,[
- {<<"cowboy">>, <<"268429481D6F41AD5564ADE4A2439C284B569083FCA0D19078AD4F56B4624724">>},
- {<<"cowlib">>, <<"1AFA5B233CEE8F642C153EC6F1DC48DB0DD9A43E2114BC8B43E9D59636F6AE1F">>},
+ {<<"cowboy">>, <<"F1B72FABE9C8A5FC64AC5AC85FB65474D64733D1DF52A26FAD5D4BA3D9F70A9F">>},
+ {<<"cowlib">>, <<"BBD58EF537904E4F7C1DD62E6AA8BC831C8183CE4EFA9BD1150164FE15BE4CAA">>},
  {<<"eper">>, <<"A50698B6803B8732AD6575285320999FE73E160A1A9FF7EFCAB6B6F818BD2C1F">>},
  {<<"goldrush">>, <<"F06E5D5F1277DA5C413E84D5A2924174182FB108DABB39D5EC548B27424CD106">>},
  {<<"jsone">>, <<"A970C23D9700AE7842B526C57677E6E3F10894B429524696EAD547E9302391C0">>},
- {<<"lager">>, <<"63897A61AF646C59BB928FEE9756CE8BDD02D5A1A2F3551D4A5E38386C2CC071">>},
+ {<<"lager">>, <<"CED6E98070FB4E58EE93174D006D46479C79844DF7FC17FA4FEFC1049A320D88">>},
  {<<"msgpack">>, <<"128AE0A2227C7E7A2847C0F0F73551C268464F8C1EE96BFFB920BC0A5712B295">>},
- {<<"ranch">>, <<"10272F95DA79340FA7E8774BA7930B901713D272905D0012B06CA6D994F8826B">>}]}
+ {<<"ranch">>, <<"F04166F456790FEE2AC1AA05A02745CC75783C2BFB26D39FAF6AEFC9A3D3A58A">>}]}
 ].
