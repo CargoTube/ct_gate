@@ -33,7 +33,7 @@
           router_if = undefined,
           ping_time = undefined,
           ping_payload = undefined,
-          transport = undefined,
+          transport_type = undefined,
           peer_ip = undefined,
           peer_port = undefined
          }).
@@ -44,16 +44,16 @@ start_link(Type) ->
     gen_statem:start_link(?MODULE, Data, []).
 
 create_initial_data({tcp, IP, Port}) ->
-    create_initial_data(undefined, handshake, rawtcp, IP, Port);
+    create_initial_data(undefined, handshake, rawsocket, IP, Port);
 create_initial_data({ws, Serializer, IP, Port}) ->
-    create_initial_data(Serializer, expect_hello, ws, IP, Port).
+    create_initial_data(Serializer, expect_hello, websocket, IP, Port).
 
-create_initial_data(Serializer, DefState, Transport, IP, Port) ->
+create_initial_data(Serializer, DefState, TransportType, IP, Port) ->
     #data{
        def_state = DefState,
        peer_pid = self(),
        serializer = Serializer,
-       transport = Transport,
+       transport_type = TransportType,
        session_id = undefined,
        peer_ip = IP,
        peer_port = Port,
@@ -314,11 +314,12 @@ code_change(_OldVsn, State, Data, _Extra) ->
 
 %% generic router handling
 
-router_handle_hello(Hello, #data{router_if = RouterIf, transport = TransType,
-                                 peer_ip = PeerIp, peer_port = PeerPort,
-                                 serializer = Protocol}) ->
+router_handle_hello(Hello, #data{router_if = RouterIf, peer_ip = PeerIp,
+                                 transport_type = TransType,
+                                 peer_port = PeerPort,
+                                 serializer = Serializer}) ->
     Transport = #{peer_ip => convert_ip(PeerIp), peer_port => PeerPort,
-                  type => TransType, protocol => Protocol },
+                  type => TransType, serializer => Serializer },
     ct_router_if:handle_hello(Hello, RouterIf, Transport).
 
 router_handle_established_message(Message, #data{router_if = RouterIf,
