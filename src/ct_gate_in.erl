@@ -108,22 +108,9 @@ handle_event(Event, Content, State, Data) ->
     {next_state, State, Data}.
 
 
-
-
-handle_raw_data(<< 127, MaxLengthExp:4, SerializerNumber:4, 0, 0>>,
-                handshake, Data) ->
-    handle_tcp_handshake_message(MaxLengthExp, SerializerNumber, Data);
 handle_raw_data(RawData, State, Data) ->
     {Messages, NewData} = deserialize_messages_update_data(RawData, Data),
     set_wamp_message_queue(Messages, State, NewData).
-
-handle_tcp_handshake_message(MaxLengthExp, SerializerNumber, Data) ->
-    lager:debug("[~p] handle handshake", [self()]),
-    Serializer = translate_serializer_number_to_name(SerializerNumber),
-    MaxLength = calculateMaxLength(MaxLengthExp),
-    send_handshake_reply(Serializer, Data),
-    NewData = Data#data{ serializer = Serializer, max_length = MaxLength},
-    activate_or_close_connection(Serializer, NewData).
 
 set_wamp_message_queue([], State, Data) ->
     activate_connection_once(Data),
@@ -211,55 +198,8 @@ set_session_id(Welcome, #data{peer_ip = IP, peer_port = Port } = Data) ->
     Data#data{session_id = SessionId}.
 
 
-
-translate_serializer_number_to_name(1) -> raw_json;
-translate_serializer_number_to_name(2) -> raw_msgpack;
-translate_serializer_number_to_name(_) -> unsupported.
-
-calculateMaxLength(MaxLengthExp) ->
-    round(math:pow(2,9+MaxLengthExp)).
-
-send_handshake_reply(raw_json, Data) ->
-    send_to_peer(use_raw_json_message(), Data);
-send_handshake_reply(raw_msgpack, Data) ->
-    send_to_peer(use_raw_msgpack_message(), Data);
-send_handshake_reply(_, Data) ->
-    send_to_peer(unsupported_serializer_message(), Data).
-
-
-unsupported_serializer_message() ->
-    <<127,1:4,0:4,0,0>>.
-
-%% max_length_unacceptable_message() ->
-%%     <<127,2:4,0:4,0,0>>.
-
-%% use_reserved_bits_message() ->
-%%     <<127,3:4,0:4,0,0>>.
-
-%% max_connections_message() ->
-%%     <<127,4:4,0:4,0,0>>.
-
-use_raw_msgpack_message() ->
-    Length = max_length(),
-    <<127,Length:4,2:4,0,0>>.
-
-use_raw_json_message() ->
-    Length = max_length(),
-    <<127,Length:4,1:4,0,0>>.
-
-
 trigger_next_message() ->
     self() ! next_message.
-
-% (x+9) ** 2 is the lengh
-% so
-%   0 -> 2 ** 9
-%   1 -> 2 ** 10 = 1024 etc.
-% the number gets shifted 4 bits to the left.
-% 15 is the max receive length possible ~ 16M (2 ** 24).
-max_length() ->
-    application:get_env(ct_gate, tcp_max_length, 15).
-
 
 
 deserialize_messages_update_data(TcpData, #data{buffer=OldBuffer,
@@ -280,12 +220,6 @@ reset_data_close_session(Data) ->
 close_connection( Data ) ->
     ok = router_handle_session_closed(Data),
     {stop, normal, Data}.
-
-activate_or_close_connection(unsupported, Data) ->
-    close_connection(Data);
-activate_or_close_connection(_, Data) ->
-    activate_connection_once(Data),
-    {next_state, expect_hello, Data}.
 
 
 activate_connection_once(#data{ peer_pid = Peer }) ->
