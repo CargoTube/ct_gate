@@ -43,14 +43,14 @@ start_link(Type) ->
     Data = create_initial_data(Type),
     gen_statem:start_link(?MODULE, Data, []).
 
-create_initial_data({tcp, IP, Port}) ->
-    create_initial_data(undefined, handshake, rawsocket, IP, Port);
+create_initial_data({tcp, Serializer, IP, Port}) ->
+    create_initial_data(Serializer, rawsocket, IP, Port);
 create_initial_data({ws, Serializer, IP, Port}) ->
-    create_initial_data(Serializer, expect_hello, websocket, IP, Port).
+    create_initial_data(Serializer, websocket, IP, Port).
 
-create_initial_data(Serializer, DefState, TransportType, IP, Port) ->
+create_initial_data(Serializer, TransportType, IP, Port) ->
     #data{
-       def_state = DefState,
+       def_state = expect_hello,
        peer_pid = self(),
        serializer = Serializer,
        transport_type = TransportType,
